@@ -272,46 +272,9 @@ func main() {
 	df1 := ds.Transpose().Multiply(d1)
 	fmt.Println("df1=", df1)
 
-	// back propagate
-	// calculate derivative
-	// d2, _ := o2.FrobeniusProduct(e1)
-	// fmt.Println("d2=", d2)
+	// %adjust weights
 
-	//calculate gradient
-	//g2 := Zeroes(len(o1), len(o1[0]))
-	// for i := range g2 {
-	// 	for j := range g2[i] {
-	// 		g2[i][j] = o1[i][j] * de2[i][0]
-	// 	}
-	// }
-	// fmt.Println("g2=", g2)
-	//
-	// d1 := Activate(o1, ReluDerivative)
-	// fp, _ := d1.FrobeniusProduct(g2)
-	// g1, _ := ds.Transpose().Multiply(fp)
-	// fmt.Println("g1=", g1)
+	// layer1=layer1-lRate*df1 -lambda*layer1;
+	// layer2=layer2-lRate*df2 -lambda*layer2;
 
-	// l1 = l1.Add(g1).Scale(0.00001)
-	// fmt.Println("l1=", l1)
-	//
-	// l2 = l2.Add(g2).Scale(0.00001)
-	// fmt.Println("l2=", l2)
-	//
-
-	// rounds
-	// for r := 0; r < 10; r++ {
-	// 	// shuffle order
-	// 	or := rand.Perm(10)
-	// 	for _, i := range or {
-	// 		// prediction
-	// 		p, _ := ds[i].InnerProduct(w)
-	// 		fmt.Printf("> Predicted; p=%f; l=%f; w=%v;\n", p, ls[i], w)
-
-	// 		// weight adjustment
-	// 		if p*ls[i] <= 0 {
-	// 			w, _ = w.Add(ds[i].Scale(lr).Scale(ls[i]))
-	// 			fmt.Printf("> > Adjusting weight; w=%v;\n", w)
-	// 		}
-	// 	}
-	// }
 }
