@@ -19,14 +19,14 @@ type Scalar float64
 type Vector []Scalar
 
 // InnerProduct -
-func (v Vector) InnerProduct(m Vector) (p Scalar, err error) {
+func (v Vector) InnerProduct(m Vector) (p Scalar) {
 	if len(v) != len(m) {
-		return p, errVectorsNotEqual
+		panic(errVectorsNotEqual)
 	}
 	for i := range v {
 		p += v[i] * m[i]
 	}
-	return p, nil
+	return p
 }
 
 // Scale -
@@ -39,32 +39,32 @@ func (v Vector) Scale(s Scalar) (r Vector) {
 }
 
 // Add -
-func (v Vector) Add(m Vector) (r Vector, err error) {
+func (v Vector) Add(m Vector) (r Vector) {
 	if len(v) != len(m) {
-		return nil, errVectorsNotEqual
+		panic(errVectorsNotEqual)
 	}
 	r = make(Vector, len(v))
 	for i, s := range v {
 		r[i] = s + m[i]
 	}
-	return r, nil
+	return r
 }
 
 // Matrix -
 type Matrix []Vector
 
 // Row -
-func (m Matrix) Row(i int) (Vector, error) {
-	return m[i], nil
+func (m Matrix) Row(i int) Vector {
+	return m[i]
 }
 
 // Col -
-func (m Matrix) Col(i int) (Vector, error) {
+func (m Matrix) Col(i int) Vector {
 	v := Vector{}
 	for j := range m {
 		v = append(v, m[j][i])
 	}
-	return v, nil
+	return v
 }
 
 // Zeroes -
@@ -72,9 +72,6 @@ func Zeroes(m, n int) Matrix {
 	r := make(Matrix, m)
 	for i := 0; i < m; i++ {
 		r[i] = make(Vector, n)
-		// for j := 0; j < n; j++ {
-		// 	r[i][j] = 0
-		// }
 	}
 	return r
 }
@@ -93,19 +90,19 @@ func RandomMatrix(m, n int, sc float64) Matrix {
 }
 
 // Multiply -
-func (m Matrix) Multiply(m2 Matrix) (Matrix, error) {
+func (m Matrix) Multiply(m2 Matrix) Matrix {
 	// TODO(geoah) Handle error
 	r := Zeroes(len(m), len(m2[0]))
 	for i := range m {
 		for j := range m2[0] {
-			col, _ := m2.Col(j)
-			row, _ := m.Row(i)
-			ip, _ := row.InnerProduct(col)
+			col := m2.Col(j)
+			row := m.Row(i)
+			ip := row.InnerProduct(col)
 			// fmt.Println(i, j, row, col, ip)
 			r[i][j] = ip
 		}
 	}
-	return r, nil
+	return r
 }
 
 // Add -
@@ -133,7 +130,7 @@ func (m Matrix) Scale(s Scalar) Matrix {
 }
 
 // FrobeniusProduct -
-func (m Matrix) FrobeniusProduct(m2 Matrix) (Matrix, error) {
+func (m Matrix) FrobeniusProduct(m2 Matrix) Matrix {
 	// TODO(geoah) Handle error
 	r := Zeroes(len(m), len(m[0]))
 	for i := range m {
@@ -141,7 +138,7 @@ func (m Matrix) FrobeniusProduct(m2 Matrix) (Matrix, error) {
 			r[i][j] = m[i][j] * m2[i][j]
 		}
 	}
-	return r, nil
+	return r
 }
 
 // Transpose -
@@ -156,28 +153,14 @@ func (m Matrix) Transpose() Matrix {
 }
 
 // MultiplyWithVector -
-func (m Matrix) MultiplyWithVector(v Vector) (Vector, error) {
+func (m Matrix) MultiplyWithVector(v Vector) Vector {
 	r := Vector{}
 	for i := range m {
-		iv, _ := m[i].InnerProduct(v) // TODO(geoah) Handle error
+		iv := m[i].InnerProduct(v)
 		r = append(r, iv)
 	}
-	return r, nil
+	return r
 }
-
-// func main() {
-// 	m1 := make(Matrix, 3)
-// 	m1[0] = Vector{1, 2}
-// 	m1[1] = Vector{3, 4}
-// 	m1[2] = Vector{5, 6}
-
-// 	m2 := make(Matrix, 2)
-// 	m2[0] = Vector{2, 3}
-// 	m2[1] = Vector{4, 5}
-
-// 	mm, _ := m1.Multiply(m2)
-// 	fmt.Printf("%+v", mm)
-// }
 
 // Derivative -
 type Derivative func(Scalar) Scalar
@@ -218,22 +201,22 @@ func main() {
 	ds[8] = Vector{3, 7, 1}
 	ds[9] = Vector{3.5, 7.5, 1}
 
-	// weights
-	// w := Vector{0, 0, 0}
-
-	// learning rate
-	// lr := Scalar(1)
-
 	// labels
 	ls := Vector{-1, -1, -1, -1, -1, 1, 1, 1, 1, 1}
+
+	// Define layer 1 size and initialization type:
+	//	layer1_size=100;
+	//	layer1= (1/sqrt(size(XX,2))) * randn(size(XX,2),layer1_size);
 
 	// layer 1
 	l1 := RandomMatrix(3, 4, 1)
 	fmt.Println("l1=", l1)
 
-	// feed forward
-	a1, _ := ds.Multiply(l1)
-	fmt.Println("a1=", a1)
+	// feed forward layer 1:
+	//z1=thisX*layer1;
+	//a1=[max(z1,0), ones(size(thisX,1),1)];
+	z1 := ds.Multiply(l1)
+	fmt.Println("z1=", z1)
 
 	// rectified linear activation function
 	rl := func(f Scalar) Scalar {
@@ -243,29 +226,51 @@ func main() {
 		return 0
 	}
 
+	//relu derivative:
+	drl := func(f Scalar) Scalar {
+		if f > 0 {
+			return 1
+		}
+		return 0
+	}
 	// activate
-	o1 := Activate(a1, rl)
-	fmt.Println("o1=", o1)
+	a1 := Activate(z1, rl)
+	fmt.Println("a1=", a1)
 
-	// calculate output error
+	// %feed forward again
+	//         z2=a1*layer2;
+	//         a2=max(0,z2);
 	l2 := RandomMatrix(4, 1, 1)
 	fmt.Println("l2=", l2)
 
-	o2, _ := o1.Multiply(l2)
-	fmt.Println("o2=", o2)
+	z2 := a1.Multiply(l2)
+	fmt.Println("z2=", z2)
+	a2 := Activate(z2, rl)
+	fmt.Println("a2=", a2)
 
-	e2 := Zeroes(len(ds), 1)
-	for i := range o2 {
+	// calculate output error derivative
+	// %back prop
+	//         %d2 = (a2-thisY).*(z2>0);
+	//         d2=a2-thisY;
+	d2 := Zeroes(len(ds), 1)
+	for i := range a2 {
 		// e1[i][0] = o2[i][0] - ls[i]
-		e2[i][0] = (ls[i] - o2[i][0]) * (ls[i] - o2[i][0])
+		d2[i][0] = (a2[i][0] - ls[i])
 	}
-	fmt.Println("e2=", e2)
+	fmt.Println("d2=", d2)
 
-	de2 := Zeroes(len(ds), 1)
-	for i := range o2 {
-		de2[i][0] = ls[i] - o2[i][0]
-	}
-	fmt.Println("de2=", de2)
+	//calculate gradient for layer 2:
+	//df2=a1'* d2;
+	df2 := a1.Transpose().Multiply(d2)
+	fmt.Println("df2=", df2)
+
+	// %backprop again
+	// d1 = ( d2 * layer2( 1: end-1,:)' ).* (z1>0);
+	// df1 = thisX'*d1;
+
+	d1 := d2.Multiply(l2.Transpose()).FrobeniusProduct(Activate(z1, drl))
+	df1 := ds.Transpose().Multiply(d1)
+	fmt.Println("df1=", df1)
 
 	// back propagate
 	// calculate derivative
@@ -273,44 +278,25 @@ func main() {
 	// fmt.Println("d2=", d2)
 
 	//calculate gradient
-	g2 := Zeroes(len(o1), len(o1[0]))
-	for i := range g2 {
-		for j := range g2[i] {
-			g2[i][j] = o1[i][j] * de2[i][0]
-		}
-	}
-	fmt.Println("g2=", g2)
+	//g2 := Zeroes(len(o1), len(o1[0]))
+	// for i := range g2 {
+	// 	for j := range g2[i] {
+	// 		g2[i][j] = o1[i][j] * de2[i][0]
+	// 	}
+	// }
+	// fmt.Println("g2=", g2)
+	//
+	// d1 := Activate(o1, ReluDerivative)
+	// fp, _ := d1.FrobeniusProduct(g2)
+	// g1, _ := ds.Transpose().Multiply(fp)
+	// fmt.Println("g1=", g1)
 
-	d1 := Activate(o1, ReluDerivative)
-	fp, _ := d1.FrobeniusProduct(g2)
-	g1, _ := ds.Transpose().Multiply(fp)
-	fmt.Println("g1=", g1)
-
-	l1 = l1.Add(g1).Scale(0.00001)
-	fmt.Println("l1=", l1)
-
-	l2 = l2.Add(g2).Scale(0.00001)
-	fmt.Println("l2=", l2)
-
-	// pass 2
-
-	// feed forward
-	a1, _ = ds.Multiply(l1)
-	fmt.Println("a1=", a1)
-
-	// activate
-	o1 = Activate(a1, rl)
-	fmt.Println("o1=", o1)
-
-	// calculate output error
-	o2, _ = o1.Multiply(l2)
-	fmt.Println("o2=", o2)
-
-	e2 = Zeroes(len(ds), 1)
-	for i := range o2 {
-		e2[i][0] = (ls[i] - o2[i][0]) * (ls[i] - o2[i][0])
-	}
-	fmt.Println("e2=", e2)
+	// l1 = l1.Add(g1).Scale(0.00001)
+	// fmt.Println("l1=", l1)
+	//
+	// l2 = l2.Add(g2).Scale(0.00001)
+	// fmt.Println("l2=", l2)
+	//
 
 	// rounds
 	// for r := 0; r < 10; r++ {
